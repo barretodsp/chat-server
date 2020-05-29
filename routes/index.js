@@ -1,8 +1,7 @@
 
+const auth = require('./auth_route')
 
 module.exports = (router) => {
-  router.post("/test", (req, res) => {
-    res.send({ response: "I'm alive" }).status(200);
-  });
+  auth(router)
   return router
 }
