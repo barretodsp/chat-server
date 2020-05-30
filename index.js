@@ -11,6 +11,7 @@ const bodyParser = require('body-parser');
 const routes = require('./routes/index')
 const passport = require("passport");
 
+
 //express config
 const app = express();
 const router = express.Router();
@@ -45,6 +46,9 @@ const pool = new pg.Pool(config);
 const server = app.listen(3000, function () {
   console.log('Example app listening on port 3000!');
 });
+
+const io = require('socket.io')(server);
+require('./chat/consumer')(io);
 
 
 module.exports = app;
