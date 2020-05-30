@@ -1,9 +1,11 @@
 const controller = require('../controllers/auth_controller');
-// const validateToken = require('../utils').validateToken;
+const passport = require('passport');
+const passportConf = require('../auth/passport');
+const passportSignIn = passport.authenticate('local', { session: false });
+const passportJWT = passport.authenticate('jwt', { session: false });
+
 
 module.exports = (router) => {
-  router.route('/auth/medicalLogin')
-    .post(controller.medical_login);
-  router.route('/auth/add')
-    .post(controller.add);
+  router.route('/auth/loginMedical')
+    .post(passportSignIn, controller.loginMedical)
 };

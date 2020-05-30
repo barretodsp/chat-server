@@ -5,19 +5,29 @@ if (result.error) {
 }
 console.log(result.parsed);
 
+const pg = require('pg');
 const express = require('express');
 const bodyParser = require('body-parser');
-const pg = require('pg');
 const routes = require('./routes/index')
+const passport = require("passport");
 
 //express config
-var app = express();
+const app = express();
 const router = express.Router();
 
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(bodyParser.json());
+
+// passport.serializeUser(function(user, cb) {
+//   cb(null, user);
+// });
+
+// passport.deserializeUser(function(obj, cb) {
+//   cb(null, obj);
+// });
+app.use(passport.initialize());
 app.use('/api/v1', routes(router));
 
 

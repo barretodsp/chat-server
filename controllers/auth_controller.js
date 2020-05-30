@@ -1,5 +1,7 @@
 
 const pg = require("pg");
+const cfg = require("../config");
+const token_processor = require('../auth/token_processor');
 
 var config = {
   database: process.env.DATABASE,
@@ -11,116 +13,25 @@ var config = {
 const pool = new pg.Pool(config);
 
 module.exports = {
-  add_patient: (req, res) => {
-    console.log("add");
-    const query = {
-      text: "INSERT INTO patient (patient_id, name, cep, email, cpf, created_dt) VALUES (uuid_generate_v1(), $1, $2, $3, $4, CURRENT_TIMESTAMP)",
-      rowMode: "array"
-    };
-    console.log("Dados recebidos:");
-    console.log(req.body);
-    //call patient validator
-    // console.log(batch);
-    // const { valid, errors } = patient.validate();
-    const errors = 'Oops!'
-    if (true) {
-      var patient = {
-        name: req.body.name,
-        cep: req.body.cep,
-        email: req.body.email,
-        cpf: req.body.cpf
-      }
-      console.log("Vai usar o pool");
-      console.log(pool);
-      pool.connect().then(client => {
-        console.log("Executando query");
-        return client.query(query, [patient.name, patient.cep, patient.email, patient.cpf])
-          .then(qresult => {
-            res.status(200).json({
-              type: 'addResponse',
-              data: qresult.rowCount
-            });
-          })
-          .catch(e => {
-            console.error(e.stack);
-            res.status(500).json({
-              type: 'addQueryError',
-              details: "Erro:\n" + e.stack
-            });
-          })
-          .finally(() => {
-            client.release();
-          })
-      }).catch(e => {
-        console.error(e.stack);
-        res.status(500).json({
-          type: 'addQueryError',
-          details: "Erro:\n" + e.stack
-        });
-      }).finally(() => pool.end());
+  loginMedical: async (req, res, next) => {
+    console.log("loginMedical", req.user);
+    if (req.user) {
+      const token = signToken(req.user);
+      res.cookie('access_token', token, {
+        httpOnly: true
+      });
+      res.status(200).json({
+        type: "loginMedical",
+        token: token,
+        medical: req.user,
+        auth: true
+      });
     }
     else {
-      res.status(400).json({
-        type: 'addValidationError',
-        details: JSON.stringify(errors),
-        errorlist: errors
+      res.status(200).json({
+        type: "loginMedical",
+        auth: false
       });
     }
   },
-  login_medical: (req, res) => {
-    console.log("add");
-    const query = {
-      text: "INSERT INTO patient (patient_id, name, cep, email, cpf, created_dt) VALUES (uuid_generate_v1(), $1, $2, $3, $4, CURRENT_TIMESTAMP)",
-      rowMode: "array"
-    };
-    console.log("Dados recebidos:");
-    console.log(req.body);
-        //call patient validator
-    // console.log(batch);
-    // const { valid, errors } = patient.validate();
-    const { valid, errors} = {valid: false, errors: 'Oops'}
-    if (valid) {
-      var patient = {
-        name: req.body.name,
-        cep: req.body.cep,
-        email: req.body.email,
-        cpf: req.body.cpf
-      }
-      console.log("Vai usar o pool");
-      console.log(pool);
-      pool.connect().then(client => {
-        console.log("Executando query");
-        return client.query(query, [patient.name, patient.cep, patient.email, patient.cpf])
-          .then(qresult => {
-            res.status(200).json({
-              type: 'addResponse',
-              data: qresult.rowCount
-            });
-          })
-          .catch(e => {
-            console.error(e.stack);
-            res.status(500).json({
-              type: 'addQueryError',
-              details: "Erro:\n" + e.stack
-            });
-          })
-          .finally(() => {
-            client.release();
-          })
-      }).catch(e => {
-        console.error(e.stack);
-        res.status(500).json({
-          type: 'addQueryError',
-          details: "Erro:\n" + e.stack
-        });
-      }).finally(() => pool.end());
-    }
-    else {
-      res.status(400).json({
-        type: 'addValidationError',
-        details: JSON.stringify(errors),
-        errorlist: errors
-      });
-    }
-  }
 }
