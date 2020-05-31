@@ -1,6 +1,8 @@
 
 const pg = require("pg");
-const uuid = require("uuid");
+const cfg = require("../config");
+const bcrypt = require("bcrypt");
+const Medical = require("../models/Medical");
 
 var config = {
   database: process.env.DATABASE,
@@ -12,9 +14,9 @@ var config = {
 const pool = new pg.Pool(config);
 
 async function getByEmail(email) {
-  console.log("getByEmail - Patient");
+  console.log("getByEmail");
   const query = {
-    text: "select array_to_json(array_agg(row_to_json(t))) from (SELECT * FROM patient WHERE email = $1 AND deleted_dt IS NULL) t",
+    text: "select array_to_json(array_agg(row_to_json(t))) from (SELECT * FROM medical WHERE email = $1 AND deleted_dt IS NULL) t",
     rowMode: "array"
   };
   var dbCon = await pool.connect();
@@ -27,25 +29,23 @@ async function getByEmail(email) {
   }
 }
 
-async function add(patient) {
+
+async function joinPatient(socket_id, patient_id) {
   try {
-    console.log("add - Patient");
-    let nid = uuid.v1()
+    console.log("joinPatient");
     const query = {
-      text: "INSERT INTO patient (patient_id, name, cep, email, cpf, created_dt) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)",
+      text: "INSERT INTO waiting_queue (waiting_queue_id, socket_id, patient_id, join_dt) VALUES (uuid_generate_v1(), $1, $2, CURRENT_TIMESTAMP)",
       rowMode: "array"
     };
-    let dbCon = await pool.connect();
-    await dbCon.query(query, [nid, patient.name, patient.cep, patient.email, patient.cpf]);
-    return nid;
+    var dbCon = await pool.connect();
+    await dbCon.query(query, [socket_id, patient_id]);
+    return true
   } catch (er) {
-    console.log('ERRO add-patient =>', er);
     return false
   }
 }
 
-
 module.exports = {
   getByEmail,
-  add
+  joinPatient
 }

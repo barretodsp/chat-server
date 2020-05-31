@@ -13,8 +13,8 @@ var config = {
 const pool = new pg.Pool(config);
 
 module.exports = {
-  loginMedical: async (req, res, next) => {
-    console.log("loginMedical", req.user);
+  loginMedical: async (req, res) => {
+    console.log("loginMedical");
     if (req.user) {
       const token = signToken(req.user);
       res.cookie('access_token', token, {

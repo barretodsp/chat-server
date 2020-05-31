@@ -16,21 +16,16 @@ const passport = require("passport");
 const app = express();
 const router = express.Router();
 
+// ************** VERIFICAR HTTP SEM CORS
+var cors = require('cors')
+app.use(cors());
+
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 app.use(bodyParser.json());
-
-// passport.serializeUser(function(user, cb) {
-//   cb(null, user);
-// });
-
-// passport.deserializeUser(function(obj, cb) {
-//   cb(null, obj);
-// });
 app.use(passport.initialize());
 app.use('/api/v1', routes(router));
-
 
 //database config
 var config = {

@@ -2,6 +2,7 @@
 const pg = require("pg");
 const cfg = require("../config");
 const bcrypt = require("bcrypt");
+const Medical = require("../models/Medical");
 
 var config = {
   database: process.env.DATABASE,
@@ -42,7 +43,7 @@ async function getCryptedPassword(medicalId) {
   else {
     return null;
   }
-} 
+}
 
 async function checkPassword(passwordToCheck, prmDbPass) {
   try {
@@ -62,7 +63,7 @@ module.exports = {
   getByEmail,
   checkPassword,
   getCryptedPassword,
-  add: (req, res) => {
+  add: async (req, res) => {
     console.log("medical-add");
     const query = {
       text: "INSERT INTO medical (medical_id, name, cep, email, cpf, crm, encrypted_password, created_dt) VALUES (uuid_generate_v1(), $1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)",
@@ -70,59 +71,64 @@ module.exports = {
     };
     console.log("Dados recebidos:");
     console.log(req.body);
-    //call patient validator
-    // console.log(patient);
-    // const { valid, errors } = patient.validate();
-    // verificar se já existe antes de criar.
-    const errors = 'Oops!'
-    if (true) {
-      var medical = {
-        name: req.body.name,
-        cep: req.body.cep,
-        email: req.body.email,
-        cpf: req.body.cpf,
-        crm: req.body.crm,
-        password: req.body.password
-      }
-      bcrypt.hash(medical.password, cfg.saltingRounds, function (err, hash) {
-        medical.pwd = hash;
-        console.log('SENHA HASH', medical.pwd)
-        if (err) {
-          console.log(err);
-          res.status(500).json({
-            type: 'addResponse',
-            type: 'Error hashing password for user',
-            details: err
-          });
-        }
-        else {
-          pool.connect().then(client => {
-            return client.query(query, [medical.name, medical.cep, medical.email, medical.cpf, medical.crm, medical.pwd])
-              .then(qresult => {
-                res.status(200).json({
-                  type: 'addResponse',
-                  data: qresult.rowCount
-                });
-              })
-              .catch(e => {
-                res.status(500).json({
-                  type: 'addError2',
-                  details: JSON.stringify(e),
-                  errorlist: e
-                });
-              })
-          }).catch(e => {
+    var medical = new Medical({
+      name: req.body.name,
+      email: req.body.email,
+      cep: req.body.cep,
+      cpf: req.body.cpf,
+      crm: req.body.crm,
+      encrypted_password: req.body.password
+    });
+    const { valid, errors } = medical.validate();
+    if (valid) {
+      const user = await getByEmail(medical.email);
+      console.log('USER EXISTS?', user)
+      if (user) {
+        res.status(400).json({
+          type: 'emailInvalid',
+          details: "E-mail inválido para cadastro."
+        });
+      } else {
+        bcrypt.hash(medical.encrypted_password, cfg.saltingRounds, function (err, hash) {
+          medical.pwd = hash;
+          console.log('SENHA HASH', medical.pwd)
+          if (err) {
+            console.log(err);
             res.status(500).json({
-              type: 'addError1',
-              details: JSON.stringify(e),
-              errorlist: e
+              type: 'addResponse',
+              type: 'Error hashing password for user',
+              details: err
             });
-          })
-        }
-      });
+          }
+          else {
+            pool.connect().then(client => {
+              return client.query(query, [medical.name, medical.cep, medical.email, medical.cpf, medical.crm, medical.pwd])
+                .then(qresult => {
+                  res.status(200).json({
+                    type: 'addResponse',
+                    data: qresult.rowCount
+                  });
+                })
+                .catch(e => {
+                  res.status(500).json({
+                    type: 'addError2',
+                    details: JSON.stringify(e),
+                    errorlist: e
+                  });
+                })
+            }).catch(e => {
+              res.status(500).json({
+                type: 'addError1',
+                details: JSON.stringify(e),
+                errorlist: e
+              });
+            })
+          }
+        });
+      }
     } else {
       res.status(400).json({
-        type: 'addValidationError',
+        type: 'emptyParams',
         details: JSON.stringify(errors),
         errorlist: errors
       });
