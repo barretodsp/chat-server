@@ -1,8 +1,5 @@
 
 const pg = require("pg");
-const cfg = require("../config");
-const bcrypt = require("bcrypt");
-const Medical = require("../models/Medical");
 const uuid = require("uuid");
 
 var config = {

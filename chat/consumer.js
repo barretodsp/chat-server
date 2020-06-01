@@ -3,6 +3,7 @@ const patientController = require('../controllers/patient_controller');
 const medicalController = require('../controllers/medical_controller');
 const waitingController = require('../controllers/waiting_queue_controller');
 const consultationController = require('../controllers/medical_consultation_controller');
+const messageController = require('../controllers/consultation_chat_message_controller');
 const pg = require('pg');
 
 var config = {
@@ -27,6 +28,7 @@ module.exports = function (io) {
       if (patient) {
         console.log('PCT veio da Queue', patient)
         let resp = await waitingController.exitPatient(queue_id);
+        // let resp = true
         if (resp) {
           let cid = await consultationController.start(medical_id, patient.patient_id)
           console.log('Consultation ID', cid)
@@ -44,6 +46,7 @@ module.exports = function (io) {
             message: medical_message,
             consultation_id: cid,
             patient_socket: patient.socket_id,
+            patient_id: patient.patient_id,
             patient_name: patient.patient_name,
           });
 
@@ -60,6 +63,7 @@ module.exports = function (io) {
             message: patient_message,
             consultation_id: cid,
             medical_socket: socket.id,
+            medical_id: medical_id,
             medical_name: medical_name,
           });
         } else {
@@ -105,7 +109,7 @@ module.exports = function (io) {
               _id: uuid.v1()
             }
           ]
-          io.to(socket.id).emit('waiting_queue', msg_waiting);
+          io.to(socket.id).emit('waiting_queue', {message: msg_waiting, patient});
         } else {
           let msg_waiting = [
             {
@@ -161,59 +165,26 @@ module.exports = function (io) {
       }
     });
 
-    //lidar com acesso concorrente
-    socket.on('medical_choose_patient', function (queue_id) {
-      //retirar patient da fila de espera
-      // enviar notificação de nova consulta p/ paciente, com os ids do medico como referencia
-      //
-      if (patient) {
-        delete waitingQueue[id];
-        io.to(id).emit("medical_choosed", { medical_id: socket.id, message: `O médico ${socket.name} entrou na sala.` });
-      } else {
-        io.to(socket.id).emit("user_not_found", "Usuário não disponível.")
-      }
-    });
+    socket.on('send_consultation_message', async function (target_socket_id, target_user_id, consultation_id, message) {
+      console.log('** send-consultation_message **')
+      console.log('target_socket_id', target_socket_id);
+      console.log('target_user_id', target_user_id);
+      console.log('consultation_id', consultation_id);
+      console.log('message', message);
 
-
-    socket.on('send_private_message', function (to_id, message) {
-      console.log('MSG to', to_id)
-      console.log('UUID?', uuid.v1());
+      await messageController.add(message[0].user._id, target_user_id, consultation_id, message[0].text );
+      io.to(target_socket_id).emit('receive_consultation_message', message);
+      // console.log()
       //system message example
-      let msg_system = [
-        {
-          text: "Sala Criada",
-          system: true,
-          createdAt: new Date(),
-          _id: uuid.v1()
-        }
-      ]
-      // user message example
-      let msg = [
-        {
-          text: "Sala Criada",
-          user: { _id: 2, name: 'Servidor' },
-          createdAt: new Date(),
-          quickReplies: {
-            type: 'checkbox', // or 'radio',
-            values: [
-              {
-                title: 'Yes',
-                value: 'yes',
-              },
-              {
-                title: 'Yes, let me show you with a picture!',
-                value: 'yes_picture',
-              },
-              {
-                title: 'Nope. What?',
-                value: 'no',
-              },
-            ],
-          },
-          _id: uuid.v1()
-        }
-      ]
-      io.to(to_id).emit('receive_private_message', msg);
+      // let message = [
+      //   {
+      //     text: "Sala Criada",
+      //     system: true,
+      //     createdAt: new Date(),
+      //     _id: uuid.v1()
+      //   }
+      // ]
+      // io.to(target_socket_id).emit('receive_consultation_message', message);
     });
 
     //*************************************************** */
