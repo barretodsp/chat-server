@@ -38,6 +38,11 @@ const Medical = attributes({
     trim: true,
     nullable: false
   },
+  specialism: {
+    type: String,
+    required: false,
+    nullable: false
+  },
   crm: {
     type: String,
     required: false,
@@ -47,8 +52,8 @@ const Medical = attributes({
   specialism: {
     type: String,
     required: false,
-    trim: true,
+    trim: false,
   },
-})(class Medical {});
+})(class Medical { });
 
 module.exports = Medical;

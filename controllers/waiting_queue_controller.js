@@ -59,10 +59,27 @@ async function exitPatient(queue_id) {
   }
 }
 
+async function deletePatient(socket_id) {
+  try {
+    console.log("deletePatient", socket_id);
+    const query = {
+      text: "UPDATE waiting_queue set exit_dt = CURRENT_TIMESTAMP WHERE socket_id = $1 and exit_dt is NULL",
+      rowMode: "array"
+    };
+    var dbCon = await pool.connect();
+    await dbCon.query(query, [socket_id]);
+    return true
+  } catch (er) {
+    console.log('ERRO DELTE PCT WAI', er)
+    return false
+  }
+}
+
 module.exports = {
   getById,
   joinPatient,
   exitPatient,
+  deletePatient,
   getAll: async (req, res) => {
     console.log("getAll");
     const query = {

@@ -29,6 +29,24 @@ async function getByEmail(email) {
   }
 }
 
+async function getByEmailCpf(email, cpf) {
+  console.log("getByEmailCPF", cpf);
+  const query = {
+    text: "select array_to_json(array_agg(row_to_json(t))) from (SELECT * FROM medical WHERE (email = $1 OR cpf = $2) AND deleted_dt IS NULL) t",
+    rowMode: "array"
+  };
+  var dbCon = await pool.connect();
+  var qresult = await dbCon.query(query, [email, cpf]);
+  if ((qresult.rowCount > 0) && (qresult.rows[0][0] != null)) {
+    return qresult.rows[0][0][0];
+  }
+  else {
+    return null;
+  }
+}
+
+
+
 async function getCryptedPassword(medicalId) {
   console.log("getCryptedPassword", medicalId);
   const query = {
@@ -48,13 +66,13 @@ async function getCryptedPassword(medicalId) {
 async function getById(medicalId) {
   console.log("getById", medicalId);
   const query = {
-    text: "SELECT * FROM medical WHERE medical_id = $1 AND deleted_dt IS NULL",
+    text: "select array_to_json(array_agg(row_to_json(t))) from (SELECT * FROM medical WHERE medical_id = $1 AND deleted_dt IS NULL) t",
     rowMode: "array"
   };
   var dbCon = await pool.connect();
   var qresult = await dbCon.query(query, [medicalId]);
   if ((qresult.rowCount > 0) && (qresult.rows[0] != null)) {
-    return qresult.rows[0][0];
+    return qresult.rows[0][0][0];
   }
   else {
     return null;
@@ -83,7 +101,7 @@ module.exports = {
   add: async (req, res) => {
     console.log("medical-add");
     const query = {
-      text: "INSERT INTO medical (medical_id, name, cep, email, cpf, crm, encrypted_password, created_dt) VALUES (uuid_generate_v1(), $1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)",
+      text: "INSERT INTO medical (medical_id, name, cep, address, email, cpf, crm, specialism, encrypted_password, created_dt) VALUES (uuid_generate_v1(), $1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)",
       rowMode: "array"
     };
     console.log("Dados recebidos:");
@@ -94,16 +112,18 @@ module.exports = {
       cep: req.body.cep,
       cpf: req.body.cpf,
       crm: req.body.crm,
+      specialism: req.body.specialism,
+      address: req.body.address,
       encrypted_password: req.body.password
     });
     const { valid, errors } = medical.validate();
     if (valid) {
-      const user = await getByEmail(medical.email);
+      const user = await getByEmailCpf(medical.email, medical.cpf);
       console.log('USER EXISTS?', user)
       if (user) {
         res.status(400).json({
           type: 'emailInvalid',
-          details: "E-mail inválido para cadastro."
+          details: "E-mail ou CPF inválido para cadastro."
         });
       } else {
         bcrypt.hash(medical.encrypted_password, cfg.saltingRounds, function (err, hash) {
@@ -119,7 +139,7 @@ module.exports = {
           }
           else {
             pool.connect().then(client => {
-              return client.query(query, [medical.name, medical.cep, medical.email, medical.cpf, medical.crm, medical.pwd])
+              return client.query(query, [medical.name, medical.cep, medical.address, medical.email, medical.cpf, medical.crm, medical.specialism, medical.pwd])
                 .then(qresult => {
                   res.status(200).json({
                     type: 'addResponse',
@@ -148,6 +168,22 @@ module.exports = {
         type: 'emptyParams',
         details: JSON.stringify(errors),
         errorlist: errors
+      });
+    }
+  }, get: async (req, res) => {
+    console.log("medical-get");
+    console.log("Dados recebidos USER:", req.user);
+    if (req.user) {
+      res.status(200).json({
+        type: "getMedical",
+        medical: req.user,
+      });
+    }
+    else {
+      res.status(200).json({
+        type: "loginMedical",
+        medical: null,
+        auth: false
       });
     }
   },
