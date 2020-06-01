@@ -33,13 +33,11 @@ passport.use(new JwtStrategy({
   console.log("JwtStrategy");
   try {
     console.log('Payload', payload)
-    // const user = await medicalController.getById(payload.sub);
-    // if (!user) {
-    //   return done(null, false);
-    // }
-    // req.user = user;
-    const user = {name: 'teste user', email:"test-email"}
-    req.user = user
+    const user = await medicalController.getById(payload.sub);
+    if (!user) {
+      return done(null, false);
+    }
+    req.user = user;
     done(null, user);
   } 
   catch(error) {

@@ -45,6 +45,22 @@ async function getCryptedPassword(medicalId) {
   }
 }
 
+async function getById(medicalId) {
+  console.log("getById", medicalId);
+  const query = {
+    text: "SELECT * FROM medical WHERE medical_id = $1 AND deleted_dt IS NULL",
+    rowMode: "array"
+  };
+  var dbCon = await pool.connect();
+  var qresult = await dbCon.query(query, [medicalId]);
+  if ((qresult.rowCount > 0) && (qresult.rows[0] != null)) {
+    return qresult.rows[0][0];
+  }
+  else {
+    return null;
+  }
+}
+
 async function checkPassword(passwordToCheck, prmDbPass) {
   try {
     console.log("checkPassword");
@@ -61,6 +77,7 @@ async function checkPassword(passwordToCheck, prmDbPass) {
 
 module.exports = {
   getByEmail,
+  getById,
   checkPassword,
   getCryptedPassword,
   add: async (req, res) => {

@@ -38,7 +38,7 @@ module.exports = function (io) {
       const patient = await patientController.getByEmail(email);
       if (patient) {
         socket.user_id = patient.patient_id;
-        let resp = await waitingController.joinPatient(socket.id, patient.patient_id)
+        let resp = await waitingController.joinPatient(socket.id, patient.patient_id, patient.name)
         if (resp) {
           let msg_waiting = [
             {
@@ -79,7 +79,7 @@ module.exports = function (io) {
       console.log('create_patient', data)
       let patient_id = await patientController.add(data);
       if (patient_id) {
-        let resp = await waitingController.joinPatient(socket.id, patient_id)
+        let resp = await waitingController.joinPatient(socket.id, patient_id, data.name)
         if (resp) {
           let msg_waiting = [
             {
