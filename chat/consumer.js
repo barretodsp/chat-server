@@ -1,6 +1,8 @@
 const uuid = require('uuid');
 const patientController = require('../controllers/patient_controller');
+const medicalController = require('../controllers/medical_controller');
 const waitingController = require('../controllers/waiting_queue_controller');
+const consultationController = require('../controllers/medical_consultation_controller');
 const pg = require('pg');
 
 var config = {
@@ -15,9 +17,64 @@ const pool = new pg.Pool(config);
 module.exports = function (io) {
 
   io.on('connection', function (socket) {
-    socket.on('hello_medical', function (name) {
-      console.log('SID - HELLO-MEDICAL', socket.id);
-      socket.name = name
+
+    socket.on('start_consultation', async function (queue_id, medical_id, medical_name) {
+      console.log('START CONSULTATION');
+      console.log('queue_id', queue_id);
+      console.log('medical_id', medical_id);
+      // socket.name = name
+      let patient = await waitingController.getById(queue_id);
+      if (patient) {
+        console.log('PCT veio da Queue', patient)
+        let resp = await waitingController.exitPatient(queue_id);
+        if (resp) {
+          let cid = await consultationController.start(medical_id, patient.patient_id)
+          console.log('Consultation ID', cid)
+          
+          // TO MEDICAL
+          let medical_message = [
+            {
+              text: `${medical_name}, a consulta foi iniciada!`,
+              user: { _id: 999, name: 'ChatBot' },
+              createdAt: new Date(),
+              _id: uuid.v1()
+            }
+          ]
+          io.to(socket.id).emit('consultation_started', {
+            message: medical_message,
+            consultation_id: cid,
+            patient_socket: patient.socket_id,
+            patient_name: patient.patient_name,
+          });
+
+          // TO PATIENT
+          let patient_message = [
+            {
+              text: `${patient.patient_name}, a consulta começou!`,
+              user: { _id: 999, name: 'ChatBot' },
+              createdAt: new Date(),
+              _id: uuid.v1()
+            }
+          ]
+          io.to(patient.socket_id).emit('consultation_started', {
+            message: patient_message,
+            consultation_id: cid,
+            medical_socket: socket.id,
+            medical_name: medical_name,
+          });
+        } else {
+          console.log('Paciente not found!')
+          let message = [
+            {
+              text: `O paciente não estava mais na fila! Realize uma nova escolha.`,
+              user: { _id: 999, name: 'ChatBot' },
+              createdAt: new Date(),
+              _id: uuid.v1()
+            }
+          ]
+          io.to(socket.id).emit('patient_not_found', message);
+        }
+      }
     });
 
     socket.on('hello_patient', function (email) {
@@ -104,16 +161,12 @@ module.exports = function (io) {
       }
     });
 
-    socket.on('get_patient_queue', function () {
-      console.log('FILA PRO MEDICO', waitingQueue);
-      io.to(socket.id).emit('patient_queue', waitingQueue);
-    });
-
     //lidar com acesso concorrente
-    socket.on('medical_choose_patient', function (id) {
-      let patient = waitingQueue[id];
+    socket.on('medical_choose_patient', function (queue_id) {
+      //retirar patient da fila de espera
+      // enviar notificação de nova consulta p/ paciente, com os ids do medico como referencia
+      //
       if (patient) {
-        attendingQueue[id] = patient;
         delete waitingQueue[id];
         io.to(id).emit("medical_choosed", { medical_id: socket.id, message: `O médico ${socket.name} entrou na sala.` });
       } else {

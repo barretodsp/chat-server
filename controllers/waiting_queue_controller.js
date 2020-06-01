@@ -13,14 +13,15 @@ var config = {
 };
 const pool = new pg.Pool(config);
 
-async function getByEmail(email) {
-  console.log("getByEmail");
+
+async function getById(queue_id) {
+  console.log("getById- Queue");
   const query = {
-    text: "select array_to_json(array_agg(row_to_json(t))) from (SELECT * FROM medical WHERE email = $1 AND deleted_dt IS NULL) t",
+    text: "select array_to_json(array_agg(row_to_json(t))) from (SELECT * FROM waiting_queue WHERE waiting_queue_id = $1 AND exit_dt IS NULL) t",
     rowMode: "array"
   };
   var dbCon = await pool.connect();
-  var qresult = await dbCon.query(query, [email]);
+  var qresult = await dbCon.query(query, [queue_id]);
   if ((qresult.rowCount > 0) && (qresult.rows[0][0] != null)) {
     return qresult.rows[0][0][0];
   }
@@ -45,9 +46,26 @@ async function joinPatient(socket_id, patient_id, patient_name) {
   }
 }
 
+async function exitPatient(queue_id) {
+  try {
+    console.log("exitPatient", queue_id);
+    const query = {
+      text: "UPDATE waiting_queue set exit_dt = CURRENT_TIMESTAMP WHERE waiting_queue_id = $1",
+      rowMode: "array"
+    };
+    var dbCon = await pool.connect();
+    await dbCon.query(query, [queue_id]);
+    return true
+  } catch (er) {
+    console.log('ERRO EXIT PCT', er)
+    return false
+  }
+}
+
 module.exports = {
-  getByEmail,
+  getById,
   joinPatient,
+  exitPatient,
   getAll: async (req, res) => {
     console.log("getAll");
     const query = {
