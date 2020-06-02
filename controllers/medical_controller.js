@@ -186,6 +186,56 @@ module.exports = {
         auth: false
       });
     }
-  },
+  }, update: async (req, res) => {
+    console.log("medical-update");
+    const query = {
+      text: "UPDATE medical set  name = $1, cep = $2, address = $3, email = $4, cpf = $5, crm = $6, specialism = $7 WHERE medical_id = $8 ",
+      rowMode: "array"
+    };
+    console.log("Dados recebidos:");
+    console.log(req.body);
+    var medical = new Medical({
+      name: req.body.name,
+      email: req.body.email,
+      cep: req.body.cep,
+      cpf: req.body.cpf,
+      crm: req.body.crm,
+      specialism: req.body.specialism,
+      address: req.body.address,
+      encrypted_password: req.body.password
+    });
+    const { valid, errors } = medical.validate();
+    if (valid) {
+      pool.connect().then(client => {
+        return client.query(query, [medical.name, medical.cep, medical.address, medical.email, medical.cpf, medical.crm, medical.specialism, req.body.medical_id])
+          .then(qresult => {
+            res.status(200).json({
+              type: 'addResponse',
+              data: qresult.rowCount
+            });
+          })
+          .catch(e => {
+            res.status(500).json({
+              type: 'addError2',
+              details: JSON.stringify(e),
+              errorlist: e
+            });
+          })
+      }).catch(e => {
+        res.status(500).json({
+          type: 'addError1',
+          details: JSON.stringify(e),
+          errorlist: e
+        });
+      })
+    } else {
+      res.status(400).json({
+        type: 'emptyParams',
+        details: JSON.stringify(errors),
+        errorlist: errors
+      });
+    }
+
+  }
 
 }

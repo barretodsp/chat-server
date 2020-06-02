@@ -22,43 +22,49 @@ module.exports = function (io) {
     socket.on('disconnect', async function () {
       console.log('##### Got disconnect! #####');
       console.log('SocketID', socket.id)
-      if (socket.type == 2) {
-        console.log('TIPO PACIENTE')
-        await waitingController.deletePatient(socket.id);
-        let resp = await consultationController.getMedicalSocket(socket.id)
-        if (resp && resp.medical_socket_id) {
-          console.log('SOCKID MED', resp.medical_socket_id);
-          await consultationController.exit(socket.id);
-          let message = [
-            {
-              text: "Opa, o usuário encerrou a consulta!",
-              user: { _id: 999, name: 'ChatBot' },
-              createdAt: new Date(),
-              _id: uuid.v1()
-            }
-          ]
-          io.to(resp.medical_socket_id).emit('patient_exit', message);
-          console.log('MSG ENVIADA')
-        }
-      } else {
-        console.log('TIPO MEDICO')
-        let resp = await consultationController.getPatientSocket(socket.id);
-        if (resp && resp.patient_socket_id) {
-          console.log('SOCKID PCT', resp.patient_socket_id);
-          await consultationController.exit(socket.id);
-          let message = [
-            {
-              text: "O médico encerrou a consulta!",
-              user: { _id: 999, name: 'ChatBot' },
-              createdAt: new Date(),
-              _id: uuid.v1()
-            }
-          ]
-          io.to(resp.patient_socket_id).emit('medical_exit', message);
-          console.log('MSG ENVIADA')
+      if (socket.type) {
+        if (socket.type == 2) {
+          console.log('TIPO PACIENTE')
+          await waitingController.deletePatient(socket.id);
+          let resp = await consultationController.getMedicalSocket(socket.id);
+          console.log('UEEEEE', resp);
+          if (resp && resp.medical_socket_id) {
+            console.log('SOCKID MED', resp.medical_socket_id);
+            await consultationController.exit(socket.id);
+            let message = [
+              {
+                text: "Opa, o usuário encerrou a consulta!",
+                user: { _id: 999, name: 'ChatBot' },
+                createdAt: new Date(),
+                _id: uuid.v1()
+              }
+            ]
+            io.to(resp.medical_socket_id).emit('patient_exit', message);
+            console.log('MSG ENVIADA')
+          }
+        } else {
+          console.log('TIPO MEDICO')
+          let resp = await consultationController.getPatientSocket(socket.id);
+          if (resp && resp.patient_socket_id) {
+            console.log('SOCKID PCT', resp.patient_socket_id);
+            await consultationController.exit(socket.id);
+            let message = [
+              {
+                text: "O médico encerrou a consulta!",
+                user: { _id: 999, name: 'ChatBot' },
+                createdAt: new Date(),
+                _id: uuid.v1()
+              }
+            ]
+            io.to(resp.patient_socket_id).emit('medical_exit', message);
+            console.log('MSG ENVIADA')
 
+          }
         }
+      }else{
+        console.log('Only exit.')
       }
+
 
     });
 
@@ -142,20 +148,26 @@ module.exports = function (io) {
 
     socket.on('patient_email', async function (email) {
       console.log('patient_email', email)
+      console.log('patient socket', socket.id)
+
       const patient = await patientController.getByEmail(email);
+      console.log('PAciente', patient);
       if (patient) {
         socket.type = 2
         let resp = await waitingController.joinPatient(socket.id, patient.patient_id, patient.name)
         if (resp) {
+          console.log('Enviando Mensagem')
           let msg_waiting = [
             {
-              text: `Olá, ${patient.name}! \n Aguarde uns instantes para ser atendido por um médico.`,
+              text: `Olá, ${patient.name}! \n Aguarde uns instantes para ser atendido(a) por um médico.`,
               user: { _id: 999, name: 'ChatBot' },
               createdAt: new Date(),
               _id: uuid.v1()
             }
-          ]
-          io.to(socket.id).emit('waiting_queue', { message: msg_waiting, patient });
+          ];
+
+          console.log('Enviando Mensagem')
+          io.to(socket.id).emit('waiting_queue', {message: msg_waiting, patient});
         } else {
           let msg_waiting = [
             {
@@ -185,19 +197,25 @@ module.exports = function (io) {
     socket.on('create_patient', async function (data) {
       console.log('create_patient', data)
       let patient_id = await patientController.add(data);
+      data.patient_id = patient_id;
       if (patient_id) {
         socket.type = 2
-        let resp = await waitingController.joinPatient(socket.id, patient_id, data.name)
+        let resp = await waitingController.joinPatient(socket.id, patient_id, data.name);
+        console.log('RESP JOIN', resp);
         if (resp) {
           let msg_waiting = [
             {
-              text: `Olá, ${data.name}! \n Aguarde uns instantes para ser atendido por um médico.`,
+              text: `Olá, ${data.name}! \n Aguarde uns instantes para ser atendido(a) por um médico.`,
               user: { _id: 999, name: 'ChatBot' },
               createdAt: new Date(),
               _id: uuid.v1()
             }
-          ]
-          io.to(socket.id).emit('waiting_queue', msg_waiting);
+          ];
+
+          console.log('Enviando MSG ao PATIENT');
+          io.to(socket.id).emit('waiting_queue', {message: msg_waiting, patient: data});
+          console.log('Enviado!')
+
         } else {
           let msg_waiting = [
             {

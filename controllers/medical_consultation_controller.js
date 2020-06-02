@@ -53,7 +53,7 @@ async function getMedicalSocket(patient_socket_id) {
   var dbCon = await pool.connect();
   var qresult = await dbCon.query(query, [patient_socket_id]);
   if ((qresult.rowCount > 0) && (qresult.rows[0][0] != null)) {
-    return qresult.rows[0][0];
+    return qresult.rows[0][0][0];
   }
   else {
     return null;

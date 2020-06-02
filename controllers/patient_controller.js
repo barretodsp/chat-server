@@ -32,11 +32,11 @@ async function add(patient) {
     console.log("add - Patient");
     let nid = uuid.v1()
     const query = {
-      text: "INSERT INTO patient (patient_id, name, cep, email, cpf, created_dt) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)",
+      text: "INSERT INTO patient (patient_id, name, cep, email, cpf, address, created_dt) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)",
       rowMode: "array"
     };
     let dbCon = await pool.connect();
-    await dbCon.query(query, [nid, patient.name, patient.cep, patient.email, patient.cpf]);
+    await dbCon.query(query, [nid, patient.name, patient.cep, patient.email, patient.cpf, patient.address]);
     return nid;
   } catch (er) {
     console.log('ERRO add-patient =>', er);

@@ -6,5 +6,7 @@ module.exports = (router) => {
   router.route('/medical/add')
     .post(controller.add)
   router.route('/medical/get')
-    .post(passportJWT, controller.get);
+    .post(passportJWT, controller.get)
+  router.route('/medical/update')
+    .post(passportJWT, controller.update);
 };

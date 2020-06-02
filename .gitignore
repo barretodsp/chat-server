@@ -71,7 +71,7 @@ typings/
 .env.test
 
 #databaseSQL
-*.sql
+# *.sql
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
